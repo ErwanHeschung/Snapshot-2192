@@ -1,38 +1,45 @@
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { Scene } from "@babylonjs/core/scene";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
-import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
-import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
-import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { AudioManager } from "./engine/AudioManager";
+import { GamePhase, GameState } from "./engine/GameState";
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 
-class App {
-    constructor() {
-        var canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
+// 1. Setup Engine & Scene
+const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
+const engine = new Engine(canvas, true);
+const scene = new Scene(engine);
 
-        var engine = new Engine(canvas, true);
-        var scene = new Scene(engine);
+var camera: ArcRotateCamera = new ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 2, 2, Vector3.Zero(), scene);
+camera.attachControl(canvas, true);
 
-        var camera: ArcRotateCamera = new ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 2, 2, Vector3.Zero(), scene);
-        camera.attachControl(canvas, true);
-        var light1: HemisphericLight = new HemisphericLight("light1", new Vector3(1, 1, 0), scene);
-        var sphere: Mesh = MeshBuilder.CreateSphere("sphere", { diameter: 1 }, scene);
+const audioManager = AudioManager.getInstance(scene);
+const state = GameState.Instance;
 
-        window.addEventListener("keydown", (ev) => {
-            if (ev.shiftKey && ev.ctrlKey && ev.altKey && (ev.key === "I" || ev.key === "i")) {
-                if (scene.debugLayer.isVisible()) {
-                    scene.debugLayer.hide();
-                } else {
-                    scene.debugLayer.show();
-                }
-            }
-        });
+engine.runRenderLoop(() => {
+    scene.render();
+});
 
-        engine.runRenderLoop(() => {
-            scene.render();
-        });
+state.onPhaseChange.add((phase) => {
+    switch (phase) {
+        case GamePhase.MENU:
+            console.log("State Changed: MENU");
+            (async () => {
+                audioManager.playMusic("menu_theme");
+            })();
+            break;
+        case GamePhase.PLAYING:
+            console.log("State Changed: PLAYING");
+            (async () => {
+                audioManager.playMusic("game_theme");
+            })();
+            break;
     }
-}
-new App();
+});
+
+(async () => {
+    await audioManager.initialize();
+    state.setPhase(GamePhase.MENU);
+})();
