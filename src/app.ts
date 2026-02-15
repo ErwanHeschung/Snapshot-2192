@@ -6,40 +6,57 @@ import { AudioManager } from "./engine/AudioManager";
 import { GamePhase, GameState } from "./engine/GameState";
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
+import { AppendSceneAsync, Color3, HemisphericLight, ImportMeshAsync } from "@babylonjs/core";
+import { setupMenu } from "./scenes/MenuScene";
 
-// 1. Setup Engine & Scene
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const engine = new Engine(canvas, true);
 const scene = new Scene(engine);
 
-var camera: ArcRotateCamera = new ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 2, 2, Vector3.Zero(), scene);
+var camera: ArcRotateCamera = new ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 2, 1, Vector3.Zero(), scene);
 camera.attachControl(canvas, true);
 
 const audioManager = AudioManager.getInstance(scene);
 const state = GameState.Instance;
 
+let alpha = 0;
+
 engine.runRenderLoop(() => {
+    if (state.currentPhase === GamePhase.MENU) {
+        alpha += 0.005;
+        camera.alpha = (Math.PI / 2) + (Math.sin(alpha) * 0.2);
+    }
+
     scene.render();
 });
 
-state.onPhaseChange.add((phase) => {
+state.onPhaseChange.add(async (phase) => {
+    clearScene();
     switch (phase) {
         case GamePhase.MENU:
-            console.log("State Changed: MENU");
-            (async () => {
-                audioManager.playMusic("menu_theme");
-            })();
+            console.log("Setting up MENU...");
+            audioManager.playMusic("menu_theme");
+            setupMenu(scene, camera);
             break;
+
         case GamePhase.PLAYING:
-            console.log("State Changed: PLAYING");
-            (async () => {
-                audioManager.playMusic("game_theme");
-            })();
+            console.log("Setting up GAME...");
+            audioManager.playMusic("game_theme");
             break;
     }
 });
 
 (async () => {
     await audioManager.initialize();
-    state.setPhase(GamePhase.MENU);
 })();
+
+state.setPhase(GamePhase.MENU);
+
+function clearScene() {
+    while (scene.meshes.length > 0) {
+        scene.meshes[0].dispose();
+    }
+    while (scene.lights.length > 0) {
+        scene.lights[0].dispose();
+    }
+}
