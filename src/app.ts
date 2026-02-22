@@ -8,13 +8,16 @@ import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 import { AppendSceneAsync, Color3, HemisphericLight, ImportMeshAsync } from "@babylonjs/core";
 import { setupMenu } from "./scenes/MenuScene";
+import { Minimap } from "./engine/MiniMap";
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const engine = new Engine(canvas, true);
 const scene = new Scene(engine);
+let minimap: Minimap;
 
 var camera: ArcRotateCamera = new ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 2, 1, Vector3.Zero(), scene);
 camera.attachControl(canvas, true);
+scene.activeCameras = [camera];
 
 const audioManager = AudioManager.getInstance(scene);
 const state = GameState.Instance;
@@ -26,7 +29,11 @@ engine.runRenderLoop(() => {
         alpha += 0.005;
         camera.alpha = (Math.PI / 2) + (Math.sin(alpha) * 0.2);
     }
-
+    else if (state.currentPhase === GamePhase.PLAYING) {
+        if (minimap) {
+            minimap.update();
+        }
+    }
     scene.render();
 });
 
@@ -42,6 +49,7 @@ state.onPhaseChange.add(async (phase) => {
         case GamePhase.PLAYING:
             console.log("Setting up GAME...");
             audioManager.playMusic("game_theme");
+            minimap = new Minimap(scene);
             break;
     }
 });
